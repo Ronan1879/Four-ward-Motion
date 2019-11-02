@@ -23,8 +23,9 @@ class particles:
         return self.close_enc
     
     def get_forces(self):
-        self.for_x=np.zeros(self.pars['npar'])
-        self.for_y=np.zeros(self.pars['npar'])
+        self.fx=np.zeros(self.pars['npar'])
+        self.fy=0*self.fx
+        pot=0
         for i in range(self.pars['npar']):
             dx=self.x[i]-self.x
             dy=self.y[i]-self.y
@@ -36,15 +37,15 @@ class particles:
             #which particles are close?:
             close_ps = ((r_sq<thresh) + np.zeros(len(r_sq)))#These ones
             #Ok, I know which particles are close, if the particle's log is empty, then make that my first log:
-            if num_enc[i] == np.zeros(len(num_enc[i])):
-                num_enc[i] = close_ps
+            if np.all(self.num_enc[i] == np.zeros(len(self.num_enc[i]))):
+                self.num_enc[i] = close_ps
             
             if not(np.all(r_sq > thresh)): #if we have to care about things being close
                 #array with a 1 at each index/particle currently closer than threshold
                 close_ps = ((r_sq<thresh) + np.zeros(len(r_sq)))
-                if self.num_enc[i] == np.zeros(len(self.pars['npar'])): #if this is the first time we have to worry about particles being close...
+                if np.all(self.num_enc[i] == 0.0): #if this is the first time we have to worry about particles being close...
                     self.num_enc[i] = close_ps #then simply updatae the close log
-                elif self.num_enc[i] != close_ps: #if the particles we knew were close in the previous timestep aren't the same as the ones that are now
+                elif not np.all(self.num_enc[i] == close_ps): #if the particles we knew were close in the previous timestep are not the same as the ones that are now
                     delta_close = self.num_enc[i] - close_ps #if particle status is same (close or far), then there will be a zero at its index
                                                      #if a particle has recently become close, then there will be a -1 at it's index
                                                      #if a particle just left the vicinity, then 1-0 = 1 at it's index
@@ -53,11 +54,11 @@ class particles:
                     self.num_enc[i] = indicies #The close ones we know about are the ones we just found out
                     
             r_sq=r_sq+self.pars['thresh']**2
-            r=numpy.sqrt(rsqr)
-            r3=1.0/(r*rsqr)
-            self.fx[i]=-numpy.sum(self.m*dx*r3)*self.pars['G']
-            self.fy[i]=-numpy.sum(self.m*dy*r3)*self.pars['G']
-            pot+=self.pars['G']*numpy.sum(self.m/r)*self.m[i]
+            r=np.sqrt(r_sq)
+            r3=1.0/(r*r_sq)
+            self.fx[i]=-np.sum(self.m*dx*r3)*self.pars['G']
+            self.fy[i]=-np.sum(self.m*dy*r3)*self.pars['G']
+            pot+=self.pars['G']*np.sum(self.m/r)*self.m[i]
             return -0.5*pot, self.num_enc
         
         
@@ -67,7 +68,7 @@ class particles:
         pot=self.get_forces()
         self.vx+=self.fx*self.pars['dt']
         self.vy+=self.fy*self.pars['dt']
-        kinetic=0.5*numpy.sum(self.m*(self.vx**2+self.vy**2))
+        kinetic=0.5*np.sum(self.m*(self.vx**2+self.vy**2))
         return pot+kinetic, num_enc
         
 if __name__=='__main__':
